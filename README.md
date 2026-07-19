@@ -72,6 +72,14 @@ $env:ROAD_EDITOR_SOURCE_DATA_DIR = "C:\Users\Bryan\Desktop\global map\county-map
 The map cannot zoom or pan outside this small Lake County scope. Its widest
 view shows only major roads; zoom in for the full local editable network.
 
+## Batch scenario analysis
+
+The interactive map edits one scenario at a time. For Lake County batch
+analysis—multiple homes/origins, scenario comparison, and first-pass shelter
+placement recommendations—see [scripts/README.md](scripts/README.md). These
+tools directly apply the editor's saved road and shelter changes to its small
+regional graph.
+
 ## Deliberate build order
 
 1. **Now:** base map tiles and an editable road-network layer. Clicking a
