@@ -9,6 +9,7 @@ const stateColors = { open: "#19b84b", forward_only: "#1687e8", reverse_only: "#
 let roads;
 let roadHitAreas;
 let shelters;
+let liveShelters;
 let studyFog;
 let countyOutlines;
 let loadTimer;
@@ -174,6 +175,11 @@ function shelterIcon(feature) {
     iconAnchor: [8, 16],
   });
 }
+function shelterTooltip(feature) {
+  const properties = feature.properties;
+  const location = [properties.address, properties.city, properties.state].filter(Boolean).join(", ");
+  return [properties.name, properties.status, location, properties.capacity ? `Capacity: ${properties.capacity}` : ""].filter(Boolean).join("<br>");
+}
 async function loadShelters() {
   const payload = await (await fetch("/api/shelters")).json();
   if (shelters) map.removeLayer(shelters);
@@ -181,10 +187,26 @@ async function loadShelters() {
   payload.features.forEach(feature => {
     const [lon, lat] = feature.geometry.coordinates;
     const marker = L.marker([lat, lon], { icon: shelterIcon(feature), keyboard: false });
-    marker.bindTooltip(feature.properties.name, { sticky: true });
+    marker.bindTooltip(shelterTooltip(feature), { sticky: true });
     shelters.addLayer(marker);
   });
   shelters.addTo(map);
+}
+async function loadLiveShelters() {
+  const response = await fetch("/api/shelters/live");
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not load live FEMA shelter updates.");
+  const payload = await response.json();
+  if (liveShelters) map.removeLayer(liveShelters);
+  liveShelters = L.markerClusterGroup({ disableClusteringAtZoom: 14, maxClusterRadius: 42, showCoverageOnHover: false });
+  payload.features.forEach(feature => {
+    const [lon, lat] = feature.geometry.coordinates;
+    const marker = L.marker([lat, lon], { icon: shelterIcon(feature), keyboard: false, zIndexOffset: 100 });
+    marker.bindTooltip(shelterTooltip(feature), { sticky: true });
+    liveShelters.addLayer(marker);
+  });
+  liveShelters.addTo(map);
+  const checkedAt = new Date(payload.metadata.fetched_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  document.querySelector("#live-shelter-status").textContent = `FEMA live: ${payload.features.length} open in road scope (checked ${checkedAt}).`;
 }
 async function loadStudyArea() {
   const payload = await (await fetch("/api/study-area")).json();
@@ -211,6 +233,7 @@ async function load() {
   await loadStudyArea();
   await loadRoads();
   await loadShelters();
+  await loadLiveShelters();
   map.on("moveend", () => {
     clearTimeout(loadTimer);
     loadTimer = setTimeout(() => loadRoads().catch(error => { document.querySelector("#status").textContent = error.message; }), 150);
@@ -222,5 +245,8 @@ async function load() {
   document.querySelector("#clear-road-changes").addEventListener("click", () => {
     clearRoadChanges().catch(error => { document.querySelector("#status").textContent = error.message; });
   });
+  window.setInterval(() => {
+    loadLiveShelters().catch(error => { document.querySelector("#live-shelter-status").textContent = error.message; });
+  }, 5 * 60 * 1000);
 }
 load().catch(error => { document.querySelector("#status").textContent = error.message; });

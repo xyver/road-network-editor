@@ -23,6 +23,11 @@ is stored and drawn. The map highlights the active state after every click.
 
 ## First run
 
+Read [Download and prepare data](docs/DATA_SETUP.md) before running the
+commands below. It explains exactly which road and shelter inputs are needed,
+where to get them, how the static FEMA inventory differs from live open
+shelters, and how to create the small standalone input folder.
+
 From the workspace root:
 
 ```powershell
@@ -44,6 +49,19 @@ The prep command writes these local, gitignored artifacts under `data/baseline/`
 - `graph.json` - directed graph used by the scenario routing API
 - `scope.json` - selected counties and bounds
 
+This means a clone contains the application and reproducible preparation code,
+but not the generated road graph, road tiles, or shelter snapshot. See
+[Download and prepare data](docs/DATA_SETUP.md) for the required two-file
+prepared data bundle and the California road download.
+
+For a collaborator who only needs to run the already-prepared Lake County
+prototype, send them a ZIP of `data/baseline/`. After extracting it into their
+clone, they can start the editor with no source-data mounts:
+
+```powershell
+docker compose -f docker-compose.prepared.yml up --build
+```
+
 The mounted inputs are read-only. For this workspace, use:
 
 ```powershell
@@ -59,9 +77,9 @@ view shows only major roads; zoom in for the full local editable network.
 1. **Now:** base map tiles and an editable road-network layer. Clicking a
    segment proves that the UI and persisted graph overlay agree on its stable
    ID and its four-state availability cycle.
-2. **Next:** import and display scoped shelter locations as a separately
-   toggleable point layer.
-3. **Then:** add a map click / geocoder origin control and enable travel-time
+2. **Now:** display the scoped FEMA NSS inventory as grey pins and query FEMA
+   Open Shelters live for green pins.
+3. **Next:** add a map click / geocoder origin control and enable travel-time
    calculations against the active road scenario and selected shelters.
 
 The first graph is intentionally a transparent prototype graph: OSM road ways
@@ -78,7 +96,10 @@ its baseline times against the existing Valhalla results.
 - `POST /api/scenarios/{scenario_id}/segments/{segment_id}/cycle` - advances
   the four-state cycle
 
-Shelter import and routing endpoints will be added only in phases 2 and 3.
+- `GET /api/shelters` - scoped NSS inventory snapshot used for gray pins
+- `GET /api/shelters/live` - current FEMA Open Shelters for the editable road
+  scope; cached by the editor for two minutes and refreshed on the map every
+  five minutes
 
 Scenario state is persisted as JSON in `data/scenarios/` and remains after a
 container restart.

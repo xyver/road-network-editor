@@ -6,10 +6,15 @@ import os
 from pathlib import Path
 from typing import Any
 from functools import lru_cache
+from datetime import datetime, timezone
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from shapely.geometry import Point, shape
 
 from .scenarios import STATES, ScenarioStore
 
@@ -21,6 +26,10 @@ store = ScenarioStore(DATA_DIR)
 app = FastAPI(title="Lake County Road Network Editor", version="0.1.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+FEMA_OPEN_SHELTERS_URL = "https://gis.fema.gov/arcgis/rest/services/NSS/OpenShelters/FeatureServer/0/query"
+LIVE_SHELTER_CACHE_SECONDS = 120
+_live_shelter_cache: dict[str, Any] = {"expires_at": 0.0, "payload": None}
+
 
 def _baseline_path(filename: str) -> Path:
     path = BASELINE_DIR / filename
@@ -30,6 +39,75 @@ def _baseline_path(filename: str) -> Path:
             detail="Lake baseline is not prepared. Run the documented prepare_lake_network.py Docker command first.",
         )
     return path
+
+
+def _live_shelter_payload() -> dict[str, Any]:
+    """Retrieve the current FEMA Open Shelters feed for the editable road scope."""
+    now = datetime.now(timezone.utc)
+    now_timestamp = now.timestamp()
+    cached = _live_shelter_cache["payload"]
+    if cached and now_timestamp < _live_shelter_cache["expires_at"]:
+        return cached
+
+    query = urlencode({
+        "where": "state = 'CA'",
+        "outFields": ",".join((
+            "shelter_id", "shelter_name", "address", "city", "state", "zip",
+            "shelter_status", "evacuation_capacity", "post_impact_capacity",
+            "total_population", "hours_open", "hours_close", "org_name",
+            "ada_compliant", "pet_accommodations_code", "wheelchair_accessible",
+        )),
+        "returnGeometry": "true",
+        "outSR": "4326",
+        "f": "geojson",
+    })
+    try:
+        with urlopen(f"{FEMA_OPEN_SHELTERS_URL}?{query}", timeout=20) as response:
+            source = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=502, detail="Could not retrieve FEMA Open Shelters right now.") from exc
+
+    scope = json.loads(_baseline_path("scope.json").read_text(encoding="utf-8"))
+    scope_geometry = shape(scope["scope_geometry"])
+    features: list[dict[str, Any]] = []
+    for feature in source.get("features", []):
+        geometry = feature.get("geometry") or {}
+        coordinates = geometry.get("coordinates")
+        if not coordinates or len(coordinates) < 2:
+            continue
+        longitude, latitude = coordinates[:2]
+        if not scope_geometry.covers(Point(longitude, latitude)):
+            continue
+        properties = feature.get("properties") or {}
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [longitude, latitude]},
+            "properties": {
+                "id": str(properties.get("shelter_id") or properties.get("objectid") or ""),
+                "name": properties.get("shelter_name") or "Unnamed shelter",
+                "status": properties.get("shelter_status") or "Open",
+                "is_currently_open": True,
+                "address": properties.get("address"),
+                "city": properties.get("city"),
+                "state": properties.get("state"),
+                "capacity": properties.get("evacuation_capacity") or properties.get("post_impact_capacity"),
+                "population": properties.get("total_population"),
+                "hours_open": properties.get("hours_open"),
+                "hours_close": properties.get("hours_close"),
+            },
+        })
+    payload = {
+        "type": "FeatureCollection",
+        "features": features,
+        "metadata": {
+            "source": "FEMA Open Shelters",
+            "fetched_at": now.isoformat(),
+            "cache_seconds": LIVE_SHELTER_CACHE_SECONDS,
+        },
+    }
+    _live_shelter_cache["payload"] = payload
+    _live_shelter_cache["expires_at"] = now_timestamp + LIVE_SHELTER_CACHE_SECONDS
+    return payload
 
 
 @lru_cache(maxsize=256)
@@ -68,6 +146,11 @@ def scope() -> dict[str, Any]:
 @app.get("/api/shelters")
 def shelters() -> dict[str, Any]:
     return json.loads(_baseline_path("shelters.geojson").read_text(encoding="utf-8"))
+
+
+@app.get("/api/shelters/live")
+def live_shelters() -> dict[str, Any]:
+    return _live_shelter_payload()
 
 
 @app.get("/api/study-area")
