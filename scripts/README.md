@@ -12,6 +12,9 @@ Valhalla replacement.
 # 1. Export the current editor state.
 docker compose run --rm editor python scripts/export_scenario.py --output data/analysis/scenario.json
 
+# Or export a named UI save, including its start point.
+docker compose run --rm editor python scripts/export_scenario.py --saved-name lake-fire-closure-01 --output data/analysis/scenario.json
+
 # 2. Prepare coordinate origins from a CSV/Parquet.
 # Required columns: origin_id (or id), longitude/lon, latitude/lat.
 # Optional: origin_name/name and weight (population/equity weight).
