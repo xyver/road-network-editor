@@ -1,0 +1,4 @@
+/data/baseline/
+/data/scenarios/
+__pycache__/
+*.py[cod]

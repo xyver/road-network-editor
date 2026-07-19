@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lake County Road Network Editor</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <aside>
+    <h1>Road Network Editor</h1>
+    <p class="scope">Lake County, CA · regional driving context</p>
+    <p>Click a road segment to cycle its scenario state:</p>
+    <ol class="cycle"><li><span class="open"></span>Open both ways</li><li><span class="forward"></span>One way: drawn direction</li><li><span class="reverse"></span>One way: reverse direction</li><li><span class="closed"></span>Closed</li></ol>
+    <p id="status">Loading baseline…</p>
+    <p id="selection">No road segment selected.</p>
+    <p class="shelter-legend"><span class="shelter-swatch closed"></span>NSS shelter snapshot <span class="shelter-swatch open"></span>Open shelter</p>
+    <h2>Road types</h2>
+    <p class="filter-help">Show only selected types.</p>
+    <div id="road-type-filters" class="road-type-filters">
+      <label><input type="checkbox" value="motorway,motorway_link" checked> Motorway <small>43</small></label>
+      <label><input type="checkbox" value="trunk,trunk_link" checked> Trunk <small>453</small></label>
+      <label><input type="checkbox" value="primary,primary_link" checked> Primary <small>604</small></label>
+      <label><input type="checkbox" value="secondary,secondary_link" checked> Secondary <small>1,448</small></label>
+      <label><input type="checkbox" value="tertiary,tertiary_link" checked> Tertiary <small>959</small></label>
+      <label><input type="checkbox" value="unclassified,living_street" checked> Unclassified <small>1,673</small></label>
+      <label><input type="checkbox" value="residential" checked> Residential <small>12,236</small></label>
+      <label><input type="checkbox" value="service" checked> Service <small>12,505</small></label>
+      <label><input type="checkbox" value="track" checked> Track <small>8,704</small></label>
+      <label><input type="checkbox" value="road,raceway" checked> Other <small>15</small></label>
+    </div>
+    <button id="clear-road-changes" class="clear-road-changes" type="button">Clear all road changes</button>
+    <h2>Build order</h2>
+    <ol class="roadmap"><li class="active">Base map + editable road network</li><li>Shelter import and display</li><li>Origin selection and scenario routing</li></ol>
+    <p class="note">This is a scenario editor. It does not change OpenStreetMap or the baseline graph.</p>
+  </aside>
+  <main id="map" aria-label="Clickable Lake County road network"></main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="/static/editor.js"></script>
+</body>
+</html>

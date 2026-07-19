@@ -1,0 +1,20 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, system-ui, sans-serif; display: flex; height: 100vh; color: #17212b; }
+aside { width: 330px; padding: 22px; background: #f7f8fa; border-right: 1px solid #d8dde5; overflow-y: auto; }
+h1 { font-size: 1.35rem; margin: 0 0 4px; } p { line-height: 1.4; } .scope { color: #526273; margin-top: 0; }
+#map { flex: 1; } .cycle { padding-left: 0; list-style: none; } .cycle li { margin: 9px 0; }
+.roadmap { padding-left: 20px; color: #687787; font-size: .9rem; line-height: 1.55; } .roadmap .active { color: #17212b; font-weight: 700; }
+.filter-help { color: #526273; font-size: .85rem; margin: 0 0 7px; }.road-type-filters { display: grid; gap: 5px; grid-template-columns: 1fr 1fr; margin-bottom: 18px; }.road-type-filters label { cursor: pointer; font-size: .86rem; white-space: nowrap; }.road-type-filters small { color: #667789; }
+.clear-road-changes { background: #fff; border: 1px solid #ad4a4a; border-radius: 4px; color: #8d2929; cursor: pointer; font: 600 .86rem/1.2 Inter, system-ui, sans-serif; margin-bottom: 18px; padding: 8px 10px; width: 100%; }.clear-road-changes:hover { background: #fff0f0; }
+.cycle span { display: inline-block; width: 25px; height: 5px; vertical-align: middle; margin-right: 8px; }
+.open { background: #19b84b; } .forward { background: #1687e8; } .reverse { background: #8f42df; } .closed { background: #ef3434; }
+#status { padding: 10px; border-radius: 6px; background: #e6edf5; font-size: .92rem; }.note { font-size: .85rem; color: #526273; }
+.lake-center-control { background: #fff; border: 1px solid #8b98a7; border-radius: 4px; box-shadow: 0 1px 4px rgb(0 0 0 / 28%); color: #17212b; cursor: pointer; font: 600 13px/1.2 Inter, system-ui, sans-serif; padding: 8px 10px; }
+.lake-center-control:hover { background: #eef4fb; }
+.scenario-icon-wrapper { background: transparent; border: 0; }
+.road-scenario-icon { align-items: center; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 1px 5px rgb(0 0 0 / 55%); box-sizing: border-box; color: #fff; display: flex; font-family: Arial, sans-serif; font-weight: 900; justify-content: center; line-height: 1; transform-origin: center; }
+.road-scenario-icon.is-forward_only { background: #1687e8; }
+.road-scenario-icon.is-reverse_only { background: #8f42df; }
+.road-scenario-icon.is-closed { background: #ef3434; }
+.shelter-legend { color: #526273; font-size: .82rem; margin: 9px 0 16px; }.shelter-swatch { border: 1px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgb(0 0 0 / 28%); display: inline-block; height: 10px; margin: 0 4px 0 8px; width: 10px; }.shelter-swatch:first-child { margin-left: 0; }.shelter-swatch.closed { background: #737b84; }.shelter-swatch.open { background: #1fa64a; }
+.shelter-pin-wrapper { background: transparent; border: 0; }.shelter-pin { border: 2px solid #fff; border-radius: 50% 50% 50% 0; box-shadow: 0 1px 4px rgb(0 0 0 / 55%); display: block; height: 16px; transform: rotate(-45deg); width: 16px; }.shelter-pin.is-closed { background: #737b84; }.shelter-pin.is-open { background: #1fa64a; }
