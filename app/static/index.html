@@ -19,6 +19,10 @@
     <p id="selection">No road segment selected.</p>
     <p class="shelter-legend"><span class="shelter-swatch closed"></span>NSS shelter snapshot <span class="shelter-swatch open"></span>Open shelter</p>
     <p id="live-shelter-status" class="live-shelter-status">Checking FEMA Open Shelters…</p>
+    <h2>Route calculation</h2>
+    <label class="route-limit" for="route-minutes">Travel-time limit (minutes)</label>
+    <div class="route-controls"><input id="route-minutes" type="number" min="1" max="720" step="1" value="60"><button id="calculate-routes" type="button">Calculate routes</button></div>
+    <p id="route-results" class="route-results">Click an empty map area and choose <strong>Set start point</strong> before calculating.</p>
     <h2>Road types</h2>
     <p class="filter-help">Show only selected types.</p>
     <div id="road-type-filters" class="road-type-filters">
@@ -35,7 +39,7 @@
     </div>
     <button id="clear-road-changes" class="clear-road-changes" type="button">Clear all road changes</button>
     <h2>Build order</h2>
-    <ol class="roadmap"><li class="active">Base map + editable road network</li><li>Shelter import and display</li><li>Origin selection and scenario routing</li></ol>
+    <ol class="roadmap"><li class="active">Base map + editable road network</li><li class="active">Shelter import and display</li><li class="active">Origin selection and scenario routing</li></ol>
     <p class="note">This is a scenario editor. It does not change OpenStreetMap or the baseline graph.</p>
   </aside>
   <main id="map" aria-label="Clickable Lake County road network"></main>

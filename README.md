@@ -95,6 +95,9 @@ its baseline times against the existing Valhalla results.
   GeoJSON for the current map viewport, with its scenario state
 - `POST /api/scenarios/{scenario_id}/segments/{segment_id}/cycle` - advances
   the four-state cycle
+- `POST /api/scenarios/{scenario_id}/routes` - snaps a start point and shelter
+  points to the editable graph, then returns travel minutes and the count
+  reachable within a requested time limit
 
 - `GET /api/shelters` - scoped NSS inventory snapshot used for gray pins
 - `GET /api/shelters/live` - current FEMA Open Shelters for the editable road
@@ -102,4 +105,6 @@ its baseline times against the existing Valhalla results.
   five minutes
 
 Scenario state is persisted as JSON in `data/scenarios/` and remains after a
-container restart.
+container restart. Added shelter pins and a selected start point currently
+last for the open browser session; they are intentionally not yet saved as a
+named scenario.
