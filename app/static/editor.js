@@ -16,11 +16,14 @@ let startPoint;
 let routeOverlay;
 let selectedRouteOverlay;
 let addedShelterCount = 0;
+let scenarioShelterChanges = { added: [], removed_ids: [] };
 let studyFog;
 let countyOutlines;
 let loadTimer;
 const scenarioMarkers = new Map();
 const routeShelters = new Map();
+const shelterMarkers = new Map();
+const shelterFeatures = new Map();
 
 function selectedRoadTypes() {
   const types = new Set();
@@ -184,9 +187,10 @@ async function loadRoads() {
 }
 function shelterIcon(feature) {
   const state = feature.properties.is_added ? "added" : (feature.properties.is_currently_open ? "open" : "closed");
+  const closedMark = feature.properties.is_removed ? '<span class="shelter-closed-x">×</span>' : "";
   return L.divIcon({
     className: "shelter-pin-wrapper",
-    html: `<span class="shelter-pin is-${state}"></span>`,
+    html: `<span class="shelter-pin is-${state} ${feature.properties.is_removed ? "is-removed" : ""}"></span>${closedMark}`,
     iconSize: [16, 16],
     iconAnchor: [8, 16],
   });
@@ -202,7 +206,7 @@ function shelterPopup(feature) {
   const title = L.DomUtil.create("strong", "", content);
   title.textContent = properties.name || "Unnamed shelter";
   const lines = [
-    ["Status", properties.status],
+    ["Status", properties.is_removed ? "Closed in this scenario" : properties.status],
     ["Address", [properties.address, properties.city, properties.state].filter(Boolean).join(", ")],
     ["Capacity", properties.capacity ? `${properties.capacity} people` : ""],
     ["Type", properties.is_added ? "User-added scenario shelter" : "FEMA NSS shelter snapshot"],
@@ -211,21 +215,102 @@ function shelterPopup(feature) {
     const line = L.DomUtil.create("div", "", content);
     line.textContent = `${label}: ${value}`;
   });
+  const toggleButton = L.DomUtil.create("button", "remove-shelter", content);
+  toggleButton.type = "button";
+  toggleButton.textContent = properties.is_removed ? "Reopen shelter" : "Close shelter in scenario";
+  L.DomEvent.disableClickPropagation(content);
+  L.DomEvent.on(toggleButton, "click", () => toggleShelter(feature.properties.id, properties.is_removed).catch(error => alert(error.message)));
+  if (properties.is_added) {
+    const deleteButton = L.DomUtil.create("button", "delete-shelter", content);
+    deleteButton.type = "button";
+    deleteButton.textContent = "Delete custom shelter";
+    L.DomEvent.on(deleteButton, "click", () => deleteShelter(feature.properties.id).catch(error => alert(error.message)));
+  }
   return content;
+}
+function scenarioShelterFeature(shelter) {
+  return {
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [shelter.longitude, shelter.latitude] },
+    properties: { id: shelter.id, name: shelter.name, status: "Scenario shelter", is_added: true },
+  };
+}
+function isRemovedShelter(feature) {
+  return scenarioShelterChanges.removed_ids.includes(String(feature.properties.id));
+}
+function registerShelterMarker(feature, marker, cluster) {
+  const id = String(feature.properties.id);
+  shelterMarkers.set(id, marker);
+  shelterFeatures.set(id, feature);
+  marker.__shelterCluster = cluster;
+}
+function updateShelterChangesSummary() {
+  const added = scenarioShelterChanges.added.length;
+  const removed = scenarioShelterChanges.removed_ids.length;
+  const box = document.querySelector("#shelter-changes");
+  if (!added && !removed) {
+    box.textContent = "No shelter changes. Using the baseline dataset.";
+  } else {
+    box.textContent = `Scenario changes: ${added} added, ${removed} removed from the baseline.`;
+  }
+  const list = document.querySelector("#shelter-changes-list");
+  list.replaceChildren();
+  const changed = [
+    ...scenarioShelterChanges.added.map(item => ({ id: String(item.id), name: item.name, state: isRemovedShelter(scenarioShelterFeature(item)) ? "closed added shelter" : "added shelter" })),
+    ...scenarioShelterChanges.removed_ids
+      .filter(id => !scenarioShelterChanges.added.some(item => String(item.id) === String(id)))
+      .map(id => ({ id: String(id), name: shelterFeatures.get(String(id))?.properties.name || `Shelter ${id}`, state: "closed baseline shelter" })),
+  ];
+  changed.forEach(change => {
+    const button = L.DomUtil.create("button", "shelter-change-item", list);
+    button.type = "button";
+    button.textContent = `${change.name} — ${change.state}`;
+    button.title = "Show this shelter on the map";
+    L.DomEvent.on(button, "click", () => focusShelterChange(change.id));
+  });
+}
+async function loadScenarioShelterChanges() {
+  const response = await fetch(`/api/scenarios/${scenarioId}/shelters`);
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not load shelter changes.");
+  scenarioShelterChanges = await response.json();
+  const existingNumbers = scenarioShelterChanges.added.map(item => Number((item.name || "").match(/^New Shelter (\d+)$/)?.[1] || 0));
+  addedShelterCount = Math.max(0, ...existingNumbers);
 }
 async function loadShelters() {
   const payload = await (await fetch("/api/shelters")).json();
   if (shelters) map.removeLayer(shelters);
   shelters = L.markerClusterGroup({ disableClusteringAtZoom: 14, maxClusterRadius: 42, showCoverageOnHover: false });
+  routeShelters.clear();
+  shelterMarkers.clear();
+  shelterFeatures.clear();
   payload.features.forEach(feature => {
+    feature.properties.is_removed = isRemovedShelter(feature);
     const [lon, lat] = feature.geometry.coordinates;
     const marker = L.marker([lat, lon], { icon: shelterIcon(feature), keyboard: false });
     marker.bindTooltip(shelterTooltip(feature), { sticky: true });
     marker.bindPopup(shelterPopup(feature));
     shelters.addLayer(marker);
-    rememberRouteShelter(feature);
+    registerShelterMarker(feature, marker, shelters);
+    if (!feature.properties.is_removed) rememberRouteShelter(feature);
   });
   shelters.addTo(map);
+}
+async function loadAddedShelters() {
+  if (addedShelters) map.removeLayer(addedShelters);
+  addedShelters = L.markerClusterGroup({ disableClusteringAtZoom: 14, maxClusterRadius: 42, showCoverageOnHover: false });
+  scenarioShelterChanges.added.forEach(shelter => {
+    const feature = scenarioShelterFeature(shelter);
+    feature.properties.is_removed = isRemovedShelter(feature);
+    const [lon, lat] = feature.geometry.coordinates;
+    const marker = L.marker([lat, lon], { icon: shelterIcon(feature), keyboard: false, zIndexOffset: 150 });
+    marker.bindTooltip(shelterTooltip(feature), { sticky: true });
+    marker.bindPopup(shelterPopup(feature));
+    addedShelters.addLayer(marker);
+    registerShelterMarker(feature, marker, addedShelters);
+    if (!feature.properties.is_removed) rememberRouteShelter(feature);
+  });
+  addedShelters.addTo(map);
+  updateShelterChangesSummary();
 }
 async function loadLiveShelters() {
   const response = await fetch("/api/shelters/live");
@@ -234,11 +319,13 @@ async function loadLiveShelters() {
   if (liveShelters) map.removeLayer(liveShelters);
   liveShelters = L.markerClusterGroup({ disableClusteringAtZoom: 14, maxClusterRadius: 42, showCoverageOnHover: false });
   payload.features.forEach(feature => {
+    feature.properties.is_removed = isRemovedShelter(feature);
     const [lon, lat] = feature.geometry.coordinates;
     const marker = L.marker([lat, lon], { icon: shelterIcon(feature), keyboard: false, zIndexOffset: 100 });
     marker.bindTooltip(shelterTooltip(feature), { sticky: true });
     marker.bindPopup(shelterPopup(feature));
     liveShelters.addLayer(marker);
+    registerShelterMarker(feature, marker, liveShelters);
   });
   liveShelters.addTo(map);
   const checkedAt = new Date(payload.metadata.fetched_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -278,7 +365,8 @@ function setStartPoint(snap) {
   startMarker = L.marker(latlng, { icon: homeIcon(), zIndexOffset: 500, keyboard: false }).addTo(map);
   startMarker.bindTooltip("Start point", { direction: "top" });
   const content = L.DomUtil.create("div", "start-info-popup");
-  content.innerHTML = `<strong>Start point</strong><div>Snapped ${snap.distance_meters} m to the nearest road.</div>`;
+  const snapDescription = snap.restored ? "Restored from saved scenario." : `Snapped ${snap.distance_meters} m to the nearest road.`;
+  content.innerHTML = `<strong>Start point</strong><div>${snapDescription}</div>`;
   const removeButton = L.DomUtil.create("button", "remove-start-point", content);
   removeButton.type = "button";
   removeButton.textContent = "Remove start point";
@@ -289,7 +377,8 @@ function setStartPoint(snap) {
   document.querySelector("#route-results").className = "route-results";
   document.querySelector("#route-results").textContent = "Start point set. Choose a travel-time limit and calculate routes.";
 }
-function addShelter(latlng, name) {
+async function addShelter(snap, name) {
+  const latlng = L.latLng(snap.latitude, snap.longitude);
   addedShelterCount += 1;
   const id = `added-${Date.now()}`;
   const defaultName = `New Shelter ${addedShelterCount}`;
@@ -298,17 +387,119 @@ function addShelter(latlng, name) {
     geometry: { type: "Point", coordinates: [latlng.lng, latlng.lat] },
     properties: { id, name: name || defaultName, status: "Scenario shelter", is_added: true },
   };
-  if (!addedShelters) {
-    addedShelters = L.markerClusterGroup({ disableClusteringAtZoom: 14, maxClusterRadius: 42, showCoverageOnHover: false }).addTo(map);
-  }
-  const marker = L.marker(latlng, { icon: shelterIcon(feature), keyboard: false, zIndexOffset: 150 });
-  marker.bindTooltip(shelterTooltip(feature), { sticky: true });
-  marker.bindPopup(shelterPopup(feature));
-  addedShelters.addLayer(marker);
-  rememberRouteShelter(feature);
+  const response = await fetch(`/api/scenarios/${scenarioId}/shelters`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(routePointFromFeature(feature)),
+  });
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not add shelter.");
+  await reloadScenarioShelters();
   map.closePopup();
   document.querySelector("#route-results").className = "route-results";
   document.querySelector("#route-results").textContent = `${feature.properties.name} added. It will be included in route calculations.`;
+}
+async function removeShelter(shelterId) {
+  const response = await fetch(`/api/scenarios/${scenarioId}/shelters/${encodeURIComponent(shelterId)}/remove`, { method: "POST" });
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not remove shelter.");
+  await reloadScenarioShelters();
+  map.closePopup();
+}
+async function reopenShelter(shelterId) {
+  const response = await fetch(`/api/scenarios/${scenarioId}/shelters/${encodeURIComponent(shelterId)}/reopen`, { method: "POST" });
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not reopen shelter.");
+  await reloadScenarioShelters();
+  map.closePopup();
+}
+async function toggleShelter(shelterId, isRemoved) {
+  return isRemoved ? reopenShelter(shelterId) : removeShelter(shelterId);
+}
+async function deleteShelter(shelterId) {
+  if (!window.confirm("Delete this custom shelter permanently from the scenario?")) return;
+  const response = await fetch(`/api/scenarios/${scenarioId}/shelters/${encodeURIComponent(shelterId)}/delete`, { method: "POST" });
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not delete custom shelter.");
+  await reloadScenarioShelters();
+  map.closePopup();
+}
+function focusShelterChange(shelterId) {
+  const feature = shelterFeatures.get(String(shelterId));
+  const marker = shelterMarkers.get(String(shelterId));
+  if (!feature || !marker) return;
+  const [longitude, latitude] = feature.geometry.coordinates;
+  map.setView([latitude, longitude], Math.max(map.getZoom(), 15));
+  marker.__shelterCluster.zoomToShowLayer(marker, () => marker.openPopup());
+}
+async function resetShelters() {
+  if (!window.confirm("Remove all added shelters and restore every baseline shelter?")) return;
+  const response = await fetch(`/api/scenarios/${scenarioId}/shelters/reset`, { method: "POST" });
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not reset shelters.");
+  await reloadScenarioShelters();
+}
+async function loadSavedScenarios() {
+  const response = await fetch("/api/saved-scenarios");
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not load saved scenarios.");
+  const payload = await response.json();
+  const select = document.querySelector("#saved-scenarios");
+  const selected = select.value;
+  select.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Load saved scenario…";
+  select.append(placeholder);
+  payload.scenarios.forEach(scenario => {
+    const option = document.createElement("option");
+    option.value = scenario.name;
+    option.textContent = scenario.name;
+    select.append(option);
+  });
+  select.value = selected;
+}
+async function saveScenario() {
+  const name = document.querySelector("#scenario-name").value.trim();
+  if (!name) {
+    document.querySelector("#route-results").className = "route-results warning";
+    document.querySelector("#route-results").textContent = "Enter a scenario name before saving.";
+    return;
+  }
+  const response = await fetch(`/api/scenarios/${scenarioId}/save`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, start_point: startPoint }),
+  });
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not save scenario.");
+  await loadSavedScenarios();
+  document.querySelector("#saved-scenarios").value = name;
+  document.querySelector("#route-results").className = "route-results";
+  document.querySelector("#route-results").textContent = `Saved scenario “${name}”.`;
+}
+async function loadScenario() {
+  const name = document.querySelector("#saved-scenarios").value;
+  if (!name) {
+    document.querySelector("#route-results").className = "route-results warning";
+    document.querySelector("#route-results").textContent = "Choose a saved scenario to load.";
+    return;
+  }
+  if (!window.confirm(`Replace the current road, shelter, and start-point changes with “${name}”?`)) return;
+  const response = await fetch(`/api/scenarios/${scenarioId}/load/${encodeURIComponent(name)}`, { method: "POST" });
+  if (!response.ok) throw new Error((await response.json()).detail || "Could not load scenario.");
+  const saved = await response.json();
+  await loadRoads();
+  await reloadScenarioShelters();
+  if (saved.start_point) {
+    setStartPoint({ ...saved.start_point, restored: true });
+  } else if (startMarker) {
+    map.removeLayer(startMarker);
+    startMarker = undefined;
+    startPoint = undefined;
+  }
+  if (routeOverlay) map.removeLayer(routeOverlay);
+  if (selectedRouteOverlay) map.removeLayer(selectedRouteOverlay);
+  routeOverlay = undefined;
+  selectedRouteOverlay = undefined;
+  document.querySelector("#scenario-name").value = saved.name;
+  document.querySelector("#route-results").className = "route-results";
+  document.querySelector("#route-results").textContent = `Loaded scenario “${saved.name}”. Recalculate routes to view updated access.`;
+}
+async function reloadScenarioShelters() {
+  await loadScenarioShelterChanges();
+  await loadShelters();
+  await loadAddedShelters();
+  await loadLiveShelters();
 }
 async function showMapActionPopup(latlng) {
   const content = L.DomUtil.create("div", "map-action-popup");
@@ -323,21 +514,21 @@ async function showMapActionPopup(latlng) {
     startButton.type = "button";
     startButton.textContent = `Set start point (snap ${Math.round(snap.distance_meters)} m)`;
     L.DomEvent.on(startButton, "click", () => setStartPoint(snap));
+    const shelterLabel = L.DomUtil.create("label", "shelter-name-label", content);
+    shelterLabel.textContent = "Shelter name";
+    const shelterName = L.DomUtil.create("input", "shelter-name-input", content);
+    shelterName.type = "text";
+    shelterName.value = `New Shelter ${addedShelterCount + 1}`;
+    shelterName.maxLength = 100;
+    const shelterButton = L.DomUtil.create("button", "", content);
+    shelterButton.type = "button";
+    shelterButton.textContent = `Add shelter (snap ${Math.round(snap.distance_meters)} m)`;
+    L.DomEvent.on(shelterButton, "click", () => addShelter(snap, shelterName.value.trim()).catch(error => alert(error.message)));
   } else {
     const unavailable = L.DomUtil.create("div", "start-unavailable", content);
-    unavailable.textContent = `Start point unavailable: nearest road is ${Math.round(snap.distance_meters)} m away (limit ${snap.max_distance_meters} m).`;
+    unavailable.textContent = `Start point and shelter unavailable: nearest road is ${Math.round(snap.distance_meters)} m away (limit ${snap.max_distance_meters} m).`;
   }
-  const shelterLabel = L.DomUtil.create("label", "shelter-name-label", content);
-  shelterLabel.textContent = "Shelter name";
-  const shelterName = L.DomUtil.create("input", "shelter-name-input", content);
-  shelterName.type = "text";
-  shelterName.value = `New Shelter ${addedShelterCount + 1}`;
-  shelterName.maxLength = 100;
-  const shelterButton = L.DomUtil.create("button", "", content);
-  shelterButton.type = "button";
-  shelterButton.textContent = "Add shelter";
   L.DomEvent.disableClickPropagation(content);
-  L.DomEvent.on(shelterButton, "click", () => addShelter(latlng, shelterName.value.trim()));
   if (map._popup === popup) popup.update();
 }
 async function calculateRoutes() {
@@ -414,8 +605,8 @@ async function load() {
   map.fitBounds(scopeBounds, { padding: [10, 10] });
   await loadStudyArea();
   await loadRoads();
-  await loadShelters();
-  await loadLiveShelters();
+  await reloadScenarioShelters();
+  await loadSavedScenarios();
   map.on("click", event => showMapActionPopup(event.latlng).catch(error => {
     document.querySelector("#status").textContent = error.message;
   }));
@@ -430,11 +621,20 @@ async function load() {
   document.querySelector("#clear-road-changes").addEventListener("click", () => {
     clearRoadChanges().catch(error => { document.querySelector("#status").textContent = error.message; });
   });
+  document.querySelector("#reset-shelters").addEventListener("click", () => {
+    resetShelters().catch(error => { document.querySelector("#shelter-changes").textContent = error.message; });
+  });
   document.querySelector("#calculate-routes").addEventListener("click", () => {
     calculateRoutes().catch(error => {
       document.querySelector("#route-results").className = "route-results warning";
       document.querySelector("#route-results").textContent = error.message;
     });
+  });
+  document.querySelector("#save-scenario").addEventListener("click", () => {
+    saveScenario().catch(error => { document.querySelector("#route-results").textContent = error.message; });
+  });
+  document.querySelector("#load-scenario").addEventListener("click", () => {
+    loadScenario().catch(error => { document.querySelector("#route-results").textContent = error.message; });
   });
   window.setInterval(() => {
     loadLiveShelters().catch(error => { document.querySelector("#live-shelter-status").textContent = error.message; });

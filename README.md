@@ -103,8 +103,9 @@ its baseline times against the existing Valhalla results.
 - `GET /api/shelters/live` - current FEMA Open Shelters for the editable road
   scope; cached by the editor for two minutes and refreshed on the map every
   five minutes
+- `GET /api/scenarios/{scenario_id}/shelters` - added and hidden shelter
+  changes for a scenario
 
 Scenario state is persisted as JSON in `data/scenarios/` and remains after a
-container restart. Added shelter pins and a selected start point currently
-last for the open browser session; they are intentionally not yet saved as a
-named scenario.
+container restart. Road edits and shelter additions/removals are saved in the
+scenario; the selected start point remains a browser-session control.

@@ -49,6 +49,11 @@ class RouteRequest(BaseModel):
     max_minutes: float = Field(default=60, gt=0, le=720)
 
 
+class SaveScenarioRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    start_point: RoutePoint | None = None
+
+
 def _baseline_path(filename: str) -> Path:
     path = BASELINE_DIR / filename
     if not path.exists():
@@ -272,9 +277,76 @@ def health() -> dict[str, Any]:
     }
 
 
+@app.get("/api/saved-scenarios")
+def saved_scenarios() -> dict[str, Any]:
+    return {"scenarios": store.list_saved()}
+
+
 @app.get("/api/scenarios/{scenario_id}")
 def get_scenario(scenario_id: str) -> dict[str, Any]:
-    return {"scenario_id": scenario_id, "segment_states": store.get(scenario_id), "cycle": list(STATES)}
+    return {"scenario_id": scenario_id, "segment_states": store.get(scenario_id), "shelter_changes": store.shelter_changes(scenario_id), "cycle": list(STATES)}
+
+
+@app.post("/api/scenarios/{scenario_id}/save")
+def save_scenario(scenario_id: str, request: SaveScenarioRequest) -> dict[str, Any]:
+    try:
+        return store.save_snapshot(scenario_id, request.name, request.start_point.model_dump() if request.start_point else None)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/scenarios/{scenario_id}/load/{saved_name}")
+def load_scenario(scenario_id: str, saved_name: str) -> dict[str, Any]:
+    try:
+        return store.load_snapshot(scenario_id, saved_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/scenarios/{scenario_id}/shelters")
+def get_scenario_shelters(scenario_id: str) -> dict[str, Any]:
+    return {"scenario_id": scenario_id, **store.shelter_changes(scenario_id)}
+
+
+@app.post("/api/scenarios/{scenario_id}/shelters")
+def add_scenario_shelter(scenario_id: str, shelter: RoutePoint) -> dict[str, Any]:
+    if not shelter.id:
+        raise HTTPException(status_code=422, detail="A shelter id is required")
+    changes = store.add_shelter(scenario_id, shelter.model_dump())
+    return {"scenario_id": scenario_id, **changes}
+
+
+@app.post("/api/scenarios/{scenario_id}/shelters/{shelter_id}/remove")
+def remove_scenario_shelter(scenario_id: str, shelter_id: str) -> dict[str, Any]:
+    try:
+        changes = store.remove_shelter(scenario_id, shelter_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"scenario_id": scenario_id, **changes}
+
+
+@app.post("/api/scenarios/{scenario_id}/shelters/{shelter_id}/reopen")
+def reopen_scenario_shelter(scenario_id: str, shelter_id: str) -> dict[str, Any]:
+    try:
+        changes = store.reopen_shelter(scenario_id, shelter_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"scenario_id": scenario_id, **changes}
+
+
+@app.post("/api/scenarios/{scenario_id}/shelters/{shelter_id}/delete")
+def delete_scenario_shelter(scenario_id: str, shelter_id: str) -> dict[str, Any]:
+    try:
+        changes = store.delete_added_shelter(scenario_id, shelter_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"scenario_id": scenario_id, **changes}
+
+
+@app.post("/api/scenarios/{scenario_id}/shelters/reset")
+def reset_scenario_shelters(scenario_id: str) -> dict[str, str]:
+    store.reset_shelters(scenario_id)
+    return {"scenario_id": scenario_id, "status": "reset"}
 
 
 @app.get("/api/scope")

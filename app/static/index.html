@@ -13,33 +13,48 @@
   <aside>
     <h1>Road Network Editor</h1>
     <p class="scope">Lake County, CA · regional driving context</p>
-    <p>Click a road segment to cycle its scenario state:</p>
-    <ol class="cycle"><li><span class="open"></span>Open both ways</li><li><span class="forward"></span>One way: drawn direction</li><li><span class="reverse"></span>One way: reverse direction</li><li><span class="closed"></span>Closed</li></ol>
-    <p id="status">Loading baseline…</p>
-    <p id="selection">No road segment selected.</p>
-    <p class="shelter-legend"><span class="shelter-swatch closed"></span>NSS shelter snapshot <span class="shelter-swatch open"></span>Open shelter</p>
-    <p id="live-shelter-status" class="live-shelter-status">Checking FEMA Open Shelters…</p>
-    <h2>Route calculation</h2>
-    <label class="route-limit" for="route-minutes">Travel-time limit (minutes)</label>
-    <div class="route-controls"><input id="route-minutes" type="number" min="1" max="720" step="1" value="60"><button id="calculate-routes" type="button">Calculate routes</button></div>
-    <p id="route-results" class="route-results">Click an empty map area and choose <strong>Set start point</strong> before calculating.</p>
-    <h2>Road types</h2>
-    <p class="filter-help">Show only selected types.</p>
-    <div id="road-type-filters" class="road-type-filters">
-      <label><input type="checkbox" value="motorway,motorway_link" checked> Motorway <small>43</small></label>
-      <label><input type="checkbox" value="trunk,trunk_link" checked> Trunk <small>453</small></label>
-      <label><input type="checkbox" value="primary,primary_link" checked> Primary <small>604</small></label>
-      <label><input type="checkbox" value="secondary,secondary_link" checked> Secondary <small>1,448</small></label>
-      <label><input type="checkbox" value="tertiary,tertiary_link" checked> Tertiary <small>959</small></label>
-      <label><input type="checkbox" value="unclassified,living_street" checked> Unclassified <small>1,673</small></label>
-      <label><input type="checkbox" value="residential" checked> Residential <small>12,236</small></label>
-      <label><input type="checkbox" value="service" checked> Service <small>12,505</small></label>
-      <label><input type="checkbox" value="track" checked> Track <small>8,704</small></label>
-      <label><input type="checkbox" value="road,raceway" checked> Other <small>15</small></label>
+    <details class="sidebar-section" open>
+      <summary>Route calculation</summary>
+      <label class="route-limit" for="route-minutes">Travel-time limit (minutes)</label>
+      <div class="route-controls"><input id="route-minutes" type="number" min="1" max="720" step="1" value="30"><button id="calculate-routes" type="button">Calculate routes</button></div>
+      <p id="route-results" class="route-results">Click an empty map area and choose <strong>Set start point</strong> before calculating.</p>
+    </details>
+    <details class="sidebar-section" open>
+      <summary>Shelter changes</summary>
+      <p class="shelter-legend"><span class="shelter-swatch closed"></span>NSS shelter snapshot <span class="shelter-swatch open"></span>Open shelter</p>
+      <p id="live-shelter-status" class="live-shelter-status">Checking FEMA Open Shelters…</p>
+      <p id="shelter-changes" class="shelter-changes">No shelter changes. Using the baseline dataset.</p>
+      <div id="shelter-changes-list" class="shelter-changes-list"></div>
+      <button id="reset-shelters" class="reset-shelters" type="button">Reset shelters to baseline</button>
+    </details>
+    <details class="sidebar-section" open>
+      <summary>Road edits</summary>
+      <p>Click a road segment to cycle its scenario state:</p>
+      <ol class="cycle"><li><span class="open"></span>Open both ways</li><li><span class="forward"></span>One way: drawn direction</li><li><span class="reverse"></span>One way: reverse direction</li><li><span class="closed"></span>Closed</li></ol>
+      <p id="status">Loading baseline…</p>
+      <p id="selection">No road segment selected.</p>
+      <h2>Road types</h2>
+      <p class="filter-help">Show only selected types.</p>
+      <div id="road-type-filters" class="road-type-filters">
+        <label><input type="checkbox" value="motorway,motorway_link" checked> Motorway <small>43</small></label>
+        <label><input type="checkbox" value="trunk,trunk_link" checked> Trunk <small>453</small></label>
+        <label><input type="checkbox" value="primary,primary_link" checked> Primary <small>604</small></label>
+        <label><input type="checkbox" value="secondary,secondary_link" checked> Secondary <small>1,448</small></label>
+        <label><input type="checkbox" value="tertiary,tertiary_link" checked> Tertiary <small>959</small></label>
+        <label><input type="checkbox" value="unclassified,living_street" checked> Unclassified <small>1,673</small></label>
+        <label><input type="checkbox" value="residential" checked> Residential <small>12,236</small></label>
+        <label><input type="checkbox" value="service" checked> Service <small>12,505</small></label>
+        <label><input type="checkbox" value="track" checked> Track <small>8,704</small></label>
+        <label><input type="checkbox" value="road,raceway" checked> Other <small>15</small></label>
+      </div>
+      <button id="clear-road-changes" class="clear-road-changes" type="button">Clear all road changes</button>
+    </details>
+    <div class="scenario-controls scenario-controls-footer">
+      <input id="scenario-name" type="text" maxlength="80" placeholder="Scenario name">
+      <button id="save-scenario" type="button">Save scenario</button>
+      <select id="saved-scenarios"><option value="">Load saved scenario…</option></select>
+      <button id="load-scenario" type="button">Load scenario</button>
     </div>
-    <button id="clear-road-changes" class="clear-road-changes" type="button">Clear all road changes</button>
-    <h2>Build order</h2>
-    <ol class="roadmap"><li class="active">Base map + editable road network</li><li class="active">Shelter import and display</li><li class="active">Origin selection and scenario routing</li></ol>
     <p class="note">This is a scenario editor. It does not change OpenStreetMap or the baseline graph.</p>
   </aside>
   <main id="map" aria-label="Clickable Lake County road network"></main>
