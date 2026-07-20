@@ -636,6 +636,10 @@ async function load() {
   document.querySelector("#load-scenario").addEventListener("click", () => {
     loadScenario().catch(error => { document.querySelector("#route-results").textContent = error.message; });
   });
+  const guide = document.querySelector("#how-it-works-dialog");
+  document.querySelector("#how-it-works").addEventListener("click", () => guide.showModal());
+  document.querySelector("#close-how-it-works").addEventListener("click", () => guide.close());
+  guide.addEventListener("click", event => { if (event.target === guide) guide.close(); });
   window.setInterval(() => {
     loadLiveShelters().catch(error => { document.querySelector("#live-shelter-status").textContent = error.message; });
   }, 5 * 60 * 1000);
