@@ -80,6 +80,13 @@ belongs. Address lists are coordinate CSVs. The copied legacy Road Access
 pipeline can prepare block, block-group, tract, or county origin tables; only
 Lake-area rows should be brought into this prototype.
 
+`scripts/prepare_census_origins.py` is the direct local shortcut when the
+DaedalMap USA geometry spine is available. It creates four Lake-road-scope CSV
+files from county, tract, block-group, and block centroids. It selects the
+seven counties touching the prepared Lake buffer, but retains only centroids
+inside the routable scope; adjacent county centroids far outside the small
+graph are not falsely included.
+
 Candidates require:
 
 ```text

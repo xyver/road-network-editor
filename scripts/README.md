@@ -43,6 +43,25 @@ pipeline remains the source for County Map block-group, tract, or block origin
 tables. Export those as coordinate tables, then bring only the Lake study-area
 rows into this toolkit. Address lists are simply coordinate CSVs.
 
+When the local DaedalMap USA geometry spine is available, this repo can prepare
+the Lake graph's county, tract, block-group, and block centroids directly. It
+uses the actual prepared road scope, so it keeps Lake plus only the adjacent
+county portions inside the small cross-border road buffer:
+
+```powershell
+python scripts/prepare_census_origins.py `
+  --geometry-root "C:\\path\\to\\county-map-data\\countries\\USA\\geometry"
+```
+
+It writes four simple CSVs under `data/analysis/census_origins/`:
+`lake_scope_county_centroids.csv`, `lake_scope_tract_centroids.csv`,
+`lake_scope_blockgroup_centroids.csv`, and `lake_scope_block_centroids.csv`.
+Each has the standard `origin_id`, `longitude`, and `latitude` columns plus
+origin level and county provenance. The files are checked against the road
+graph's nearest node at the same default 3,000-meter tolerance used by the
+MCP; excluded centroids, if any, are written to an `_off_network.csv` review
+file instead of being silently used in routing.
+
 The scripts use reverse multi-source Dijkstra from all active shelters, which
 returns each origin's nearest shelter time in one graph traversal. This is much
 faster than an origin-by-shelter matrix for dynamic Lake scenarios. The first
