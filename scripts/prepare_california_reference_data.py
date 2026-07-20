@@ -4,10 +4,13 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+from shapely.geometry import mapping, shape
+from shapely.ops import unary_union
 
 
 CA_PREFIX = "USA-CA-"
@@ -58,6 +61,8 @@ args = parser.parse_args()
 
 usa = args.source_data_root / "countries" / "USA"
 args.output_dir.mkdir(parents=True, exist_ok=True)
+geometry_output = args.output_dir / "geometry"
+geometry_output.mkdir(parents=True, exist_ok=True)
 population = population_from_pl(args.pl_directory)
 shelters = pd.read_parquet(usa / "nss_shelters" / "shelters.parquet")
 outputs = {
@@ -79,5 +84,23 @@ for filename, frame in outputs.items():
     output = args.output_dir / filename
     frame.to_parquet(output, index=False, compression="zstd")
     manifest["files"][filename] = {"row_count": len(frame), "bytes": output.stat().st_size}
-(args.output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+counties = ca_rows(usa / "geometry" / "county.parquet")
+county_path = geometry_output / "counties.parquet"
+counties.to_parquet(county_path, index=False, compression="zstd")
+for level in ("tract", "blockgroup"):
+    source = usa / "geometry" / level / "USA-CA.parquet"
+    shutil.copy2(source, geometry_output / f"{level}s.parquet")
+state_geometry = unary_union([shape(json.loads(value) if isinstance(value, str) else value) for value in counties.geometry])
+state_payload = {
+    "type": "FeatureCollection",
+    "features": [{"type": "Feature", "properties": {"loc_id": "USA-CA", "name": "California", "admin_level": 1}, "geometry": mapping(state_geometry)}],
+}
+(geometry_output / "state.geojson").write_text(json.dumps(state_payload, separators=(",", ":")), encoding="utf-8")
+manifest["geometry"] = {
+    "included_levels": ["state", "county", "tract", "blockgroup"],
+    "excluded_levels": ["block"],
+    "reason_blocks_excluded": "The California block geometry is about 249 MB and is kept as a future release/input bundle rather than normal Git data.",
+    "files": {path.name: path.stat().st_size for path in sorted(geometry_output.iterdir())},
+}
+(args.output_dir / "manifest.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
 print(json.dumps(manifest, indent=2))

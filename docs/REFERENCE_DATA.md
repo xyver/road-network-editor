@@ -12,6 +12,9 @@ It contains:
 - `nri_counties.parquet` and `future_nri_counties.parquet`: California
   county-level baseline and future risk context.
 - `nss_shelters.parquet`: California FEMA shelter inventory snapshot.
+- `geometry/`: California state boundary, all county polygons, Census tract
+  polygons, and Census block-group polygons. The block layer is intentionally
+  excluded; it is a future release/input bundle because it is about 249 MB.
 
 `manifest.json` records row counts, sizes, provenance, and population QA. The
 population source is 2020 Census P.L. 94-171 `P1_001N`; it is block-level,
@@ -21,6 +24,11 @@ missing values, or negative counts. Zero-population blocks are retained.
 Smart Location is intentionally deferred: it will be a separate California
 block-group context package. ClimRR is also deferred because it needs an
 explicit grid-versus-aggregation design.
+
+Smart Location must first complete the normal County Map import and QA process
+(source validation, ID/vintage alignment, geometry joins, metric QA, metadata,
+and release checks). Once that is complete, this project should copy only the
+validated California block-group extract and its provenance metadata.
 
 ## Rebuild
 

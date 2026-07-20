@@ -1,6 +1,6 @@
 {
   "schema_version": "road-network-editor-california-reference-v1",
-  "generated_at": "2026-07-20T04:23:53.440669+00:00",
+  "generated_at": "2026-07-20T04:31:39.665958+00:00",
   "population_source": "2020 Census P.L. 94-171 P1_001N total population",
   "population_qa": {
     "row_count": 519723,
@@ -38,6 +38,24 @@
     "nss_shelters.parquet": {
       "row_count": 6600,
       "bytes": 569735
+    }
+  },
+  "geometry": {
+    "included_levels": [
+      "state",
+      "county",
+      "tract",
+      "blockgroup"
+    ],
+    "excluded_levels": [
+      "block"
+    ],
+    "reason_blocks_excluded": "The California block geometry is about 249 MB and is kept as a future release/input bundle rather than normal Git data.",
+    "files": {
+      "blockgroups.parquet": 4760494,
+      "counties.parquet": 37469,
+      "state.geojson": 20224,
+      "tracts.parquet": 2547165
     }
   }
 }
