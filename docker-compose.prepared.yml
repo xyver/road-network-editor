@@ -9,3 +9,12 @@ services:
       ROAD_EDITOR_DATA_DIR: /app/data
     volumes:
       - ./data:/app/data
+  mcp:
+    build: .
+    environment:
+      ROAD_EDITOR_DATA_DIR: /app/data
+    volumes:
+      - ./data:/app/data
+    command: ["python", "mcp_server/server.py"]
+    stdin_open: true
+    tty: false

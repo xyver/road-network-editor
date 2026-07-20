@@ -76,9 +76,13 @@ view shows only major roads; zoom in for the full local editable network.
 
 The interactive map edits one scenario at a time. For Lake County batch
 analysis—multiple homes/origins, scenario comparison, and first-pass shelter
-placement recommendations—see [scripts/README.md](scripts/README.md). These
-tools directly apply the editor's saved road and shelter changes to its small
-regional graph.
+placement recommendations—start with [Scenario Optimizer](docs/SCENARIO_OPTIMIZER.md).
+
+To let a local LLM run those operations through narrow, structured tools, see
+[Local MCP setup](docs/MCP_SETUP.md).
+It explains the baseline-versus-scenario model, origin/candidate inputs, and
+how the scripts support future local MCP tools. Command details are in
+[scripts/README.md](scripts/README.md).
 
 ## Deliberate build order
 

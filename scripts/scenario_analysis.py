@@ -143,6 +143,42 @@ def normalize_origins(frame: pd.DataFrame) -> pd.DataFrame:
     return renamed
 
 
+def normalize_candidates(frame: pd.DataFrame) -> pd.DataFrame:
+    """Normalize a simple potential-shelter CSV/Parquet table."""
+    aliases = {
+        "candidate_id": "candidate_id", "id": "candidate_id",
+        "longitude": "longitude", "lon": "longitude",
+        "latitude": "latitude", "lat": "latitude",
+        "name": "name", "candidate_name": "name",
+    }
+    renamed = frame.rename(columns={column: aliases[column] for column in frame.columns if column in aliases}).copy()
+    required = {"candidate_id", "longitude", "latitude"}
+    missing = required - set(renamed.columns)
+    if missing:
+        raise ValueError(f"Candidate input is missing required columns: {sorted(missing)}")
+    renamed["candidate_id"] = renamed["candidate_id"].astype(str)
+    renamed["longitude"] = pd.to_numeric(renamed["longitude"], errors="coerce")
+    renamed["latitude"] = pd.to_numeric(renamed["latitude"], errors="coerce")
+    renamed = renamed.dropna(subset=["longitude", "latitude"]).copy()
+    if "name" not in renamed:
+        renamed["name"] = renamed["candidate_id"]
+    return renamed
+
+
+def snap_summary(graph: dict[str, Any], frame: pd.DataFrame, id_column: str, max_snap_meters: float) -> dict[str, Any]:
+    """Return a concise automatic node-snap quality report for location inputs."""
+    snapper = NodeSnapper.from_graph(graph)
+    distances = [snapper.snap(float(row.longitude), float(row.latitude))[1] for row in frame.itertuples(index=False)]
+    off_network = [str(row[0]) for row, distance in zip(frame[[id_column]].itertuples(index=False), distances) if distance > max_snap_meters]
+    return {
+        "location_count": len(frame),
+        "max_snap_meters": max_snap_meters,
+        "maximum_observed_snap_meters": round(max(distances), 1) if distances else 0.0,
+        "off_network_count": len(off_network),
+        "off_network_ids": off_network[:50],
+    }
+
+
 def access_results(data_dir: Path, scenario: dict[str, Any], origins: pd.DataFrame, thresholds: list[int]) -> pd.DataFrame:
     graph = read_json(data_dir / "baseline" / "graph.json")
     shelters = active_shelters(data_dir, scenario)

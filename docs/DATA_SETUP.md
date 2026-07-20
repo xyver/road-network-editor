@@ -88,6 +88,15 @@ docker compose -f docker-compose.prepared.yml down
 Route A does **not** require either `ROAD_EDITOR_OSM_DIR` or
 `ROAD_EDITOR_SOURCE_DATA_DIR`.
 
+### A5. Optional: keep or share a scenario
+
+The prepared baseline ZIP is immutable road/shelter input data. It does not
+include any local road edits, shelter changes, or saved scenarios. To retain a
+scenario on one machine, use **Save scenario** in the map. To pass that state
+to batch tools or another collaborator, export the named UI save as documented
+in [Scenario Optimizer](SCENARIO_OPTIMIZER.md). The exported JSON is small and
+can travel separately from the baseline ZIP.
+
 ## Prepare a new baseline: Route B
 
 Use this route only to rebuild the road network or update the static grey
@@ -264,6 +273,8 @@ They can then open <http://localhost:8123>. This prepared-data command does
 not require either `ROAD_EDITOR_OSM_DIR` or `ROAD_EDITOR_SOURCE_DATA_DIR`.
 If they later need to rebuild roads or refresh the static grey shelter
 snapshot, they need the original inputs and should follow Route B.
+
+For batch scenario analysis after setup, see [Scenario Optimizer](SCENARIO_OPTIMIZER.md).
 
 ## Troubleshooting
 
