@@ -80,6 +80,9 @@ placement recommendations—start with [Scenario Optimizer](docs/SCENARIO_OPTIMI
 
 To let a local LLM run those operations through narrow, structured tools, see
 [Local MCP setup](docs/MCP_SETUP.md).
+
+California-wide population, shelter, and risk context used for planning is
+documented in [California reference data](docs/REFERENCE_DATA.md).
 It explains the baseline-versus-scenario model, origin/candidate inputs, and
 how the scripts support future local MCP tools. Command details are in
 [scripts/README.md](scripts/README.md).

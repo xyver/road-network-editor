@@ -1,0 +1,43 @@
+{
+  "schema_version": "road-network-editor-california-reference-v1",
+  "generated_at": "2026-07-20T04:23:53.440669+00:00",
+  "population_source": "2020 Census P.L. 94-171 P1_001N total population",
+  "population_qa": {
+    "row_count": 519723,
+    "duplicate_loc_id_count": 0,
+    "missing_population_count": 0,
+    "negative_population_count": 0,
+    "zero_population_count": 142132,
+    "geometry_match_count": 519723,
+    "geometry_only_count": 0,
+    "population_only_count": 0,
+    "lake_county_block_count": 2905,
+    "lake_county_population": 68163
+  },
+  "files": {
+    "population_blocks_2020.parquet": {
+      "row_count": 519723,
+      "bytes": 1337490
+    },
+    "cejst_classification.parquet": {
+      "row_count": 9129,
+      "bytes": 681088
+    },
+    "cejst_burdens.parquet": {
+      "row_count": 9129,
+      "bytes": 2045946
+    },
+    "nri_counties.parquet": {
+      "row_count": 58,
+      "bytes": 409656
+    },
+    "future_nri_counties.parquet": {
+      "row_count": 58,
+      "bytes": 185234
+    },
+    "nss_shelters.parquet": {
+      "row_count": 6600,
+      "bytes": 569735
+    }
+  }
+}
