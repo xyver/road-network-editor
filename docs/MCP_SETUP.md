@@ -94,6 +94,11 @@ Use `inspect_locations` first. It reports points farther than the default
 the prepared road network. The tolerance is deliberately visible and can be
 lowered for stricter work.
 
+For the initial Lake study, use Lake County locations as origins. Shelters are
+destinations: the baseline/scenario shelter list may include sites in the small
+prepared cross-border buffer, and routes may cross that border. The road graph
+is the authority on what is reachable.
+
 To make a CSV list into editable custom shelters, ask the MCP to run
 `import_custom_shelters`. It validates the same snap rule and then adds the
 locations to the active UI scenario. Refresh the browser to see them, then use

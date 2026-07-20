@@ -97,6 +97,68 @@ to batch tools or another collaborator, export the named UI save as documented
 in [Scenario Optimizer](SCENARIO_OPTIMIZER.md). The exported JSON is small and
 can travel separately from the baseline ZIP.
 
+### A6. Optional: run batch analysis or optimization
+
+Batch scripts need four distinct kinds of local input. They are intentionally
+separate so a study can keep its population origins inside Lake County while
+allowing routes to reach shelters across the county border.
+
+| Input | Required for | Where it comes from |
+| --- | --- | --- |
+| `data/baseline/` | every calculation | the prepared baseline ZIP (road graph and filtered shelter snapshot) |
+| exported scenario JSON | edited-road/edited-shelter analysis | **Save scenario** in the UI, then export it; optional for an unchanged baseline run |
+| origin CSV | access/coverage calculations | Lake County addresses, census centroids, or another list of demand locations |
+| candidate CSV | shelter optimization only | a vetted list of plausible future shelter sites |
+
+The initial study convention is **Lake County origins, cross-border
+destinations**: people represented by the origin table live in Lake County,
+but the active baseline or scenario shelter list may include reachable
+shelters in the road graph's small adjacent-county buffer. This is realistic
+and is not a data error.
+
+For the generated Census-centroid origin files, obtain or retain these four
+prepared geometry-spine files from a County Map/DaedalMap data workspace:
+
+```text
+county-map-data/countries/USA/geometry/
+  county.parquet
+  tract/USA-CA.parquet
+  blockgroup/USA-CA.parquet
+  block/USA-CA.parquet
+```
+
+Then, from this repository, run:
+
+```powershell
+python scripts/prepare_census_origins.py `
+  --geometry-root "C:\path\to\county-map-data\countries\USA\geometry"
+```
+
+This writes Lake-only county, tract, block-group, and block centroid CSVs to
+`data/analysis/census_origins/`, after checking their distance to the prepared
+road graph. The UI and the scenario scripts can then use them directly. See
+[Scenario Optimizer](SCENARIO_OPTIMIZER.md) and [Local MCP setup](MCP_SETUP.md)
+for CSV examples and commands.
+
+### Getting new geometry or coordinate inputs
+
+For a new list of homes, potential shelters, or other locations, you do not
+need geometry files: make a CSV with a stable ID, longitude, and latitude.
+The MCP validates and automatically snaps it to the prepared graph.
+
+For new Census-derived origins, prefer the prepared geometry spine above so
+IDs remain compatible with County Map. If it is unavailable, download the
+appropriate county, tract, block-group, or tabulation-block geometry from the
+[U.S. Census TIGER/Line download page](https://www.census.gov/geographies/mapping-files/2025/geo/tiger-line-file.html).
+Use its internal-point longitude/latitude fields or compute polygon centroids,
+then write the standard origin CSV. Preserve the Census vintage and GEOID in
+your file metadata/IDs.
+
+Adding points outside the prepared Lake-plus-buffer road graph is not enough
+to create a valid new study area. First rebuild the baseline with OSM roads and
+shelters covering the larger area using Route B; then prepare or import the
+corresponding origins and candidates.
+
 ## Prepare a new baseline: Route B
 
 Use this route only to rebuild the road network or update the static grey
