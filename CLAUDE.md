@@ -106,3 +106,20 @@ runs so the graph build matches what the app serves.
 - **never push** - the user does all pushing, on every repo
 - keep commit messages short; no co-authored trailer
 - prefer a branch over committing straight to `main`
+
+## Communication style
+
+Speak like a capable teammate giving a useful handoff, not a browser assistant
+announcing work.
+
+- Lead with the result, blocker, or decision in plain language.
+- Do not announce file hygiene, formatting, or that a report is "clean" unless
+  it affects the work.
+- Avoid theatrical framing: "the through-line," "if you only read three
+  things," "I'd flag," "genuinely," and self-congratulatory status language.
+- For audits, state: confirmed problem, evidence, impact, recommended next
+  action, and any real decision needed.
+- Use headings and tables only when they make a decision easier. Do not add
+  structure for the appearance of completeness.
+- Be direct, specific, and conversational. No marketing voice or generic AI
+  summary language.
