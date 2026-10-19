@@ -2,8 +2,16 @@
 
 Local-only prototype for road-closure scenarios. This is a standalone project:
 it does not import Python/JavaScript from DaedalMap or County Map. It accepts
-their prepared/source artifacts as explicit Docker mounts, so it can be moved
-to its own repository without code surgery.
+their prepared/source artifacts as explicit Docker mounts and lives in its
+own repository.
+
+As of Oct 18 2026, further development continued here:
+[DaedalMap Network source](https://github.com/xyver/daedal-map/tree/feature/mapping-network-downloads/network).
+
+The program source is licensed under [MIT](LICENSE), matching the public
+DaedalMap map runtime. Source data, prepared network graphs, shelter snapshots,
+and other installed packs retain their own source terms; the software licence
+does not grant redistribution rights for those inputs.
 
 ## Scope
 
